@@ -6,6 +6,9 @@ WIN_WIDTH = 800
 WIN_HEIGHT = 400
 FPS = 60
 
+def dist_between_points(p1, p2):
+    return ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**(1/2)
+
 def degrees_to_radians(degree):
     return 2 * math.pi * degree/360
 
@@ -41,6 +44,9 @@ class Ship():
         self.aceleration = 0.5
         self.velocity = 0
 
+        self.buffer = self.pos
+        self.body = []
+
     def get_input(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
@@ -63,6 +69,27 @@ class Ship():
         velocity_y *= self.velocity
         self.pos = (self.pos[0] + velocity_x, self.pos[1] + velocity_y)
 
+            
+    
+    def updade_buffer(self):
+        dist = dist_between_points(self.pos, self.buffer)
+        if dist > 10:
+            self.body.append({"pos":self.buffer})
+            self.body = self.body[1:]
+            self.buffer = self.pos
+            
+    
+    def grow(self):
+        self.body.append({"pos": (self.buffer)})
+
+    def update(self, surface):
+        self.updade_buffer()
+        draw_circle(ship.pos, 10, 3, ship.orientation)
+        
+        for piece in self.body:
+            draw_circle(piece["pos"], 6, 5, 0)
+
+
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -70,16 +97,21 @@ ship = Ship((400, 200))
 screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 
 while True:
+    screen.fill("#000000")
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-
-    screen.fill("#000000")
+        
+        if event.type == pygame.KEYDOWN:
+            key = event.key
+            if key in [pygame.K_m]:
+                ship.grow()
 
     ship.move()
     ship.get_input()
-    draw_circle(ship.pos, 5, 3, ship.orientation)
+    ship.update(screen)
     
     pygame.display.update()
     clock.tick(FPS)
