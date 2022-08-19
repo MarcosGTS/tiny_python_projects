@@ -6,6 +6,10 @@ WIN_WIDTH = 800
 WIN_HEIGHT = 400
 FPS = 60
 
+MIN_RADIUS = 10
+MAX_RADIUS = 80
+MIN_VELOCITY = 0.4
+
 def dist_between_points(p1, p2):
     return ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**(1/2)
 
@@ -90,12 +94,12 @@ class Ship():
             draw_circle(piece["pos"], 6, 3, piece["orientation"])
         
 class Asteroid(pygame.sprite.Sprite):
-    def __init__(self, pos, radius=10, orientation=0, velocity=1):
+    def __init__(self, pos, radius=10, orientation=0):
         super().__init__()
         
         self.radius = radius
         self.orientation = orientation
-        self.velocity = velocity
+        self.velocity =  MIN_VELOCITY / (radius / MAX_RADIUS) 
         self.pos = pos
 
         dimensions = (self.radius, self.radius)
@@ -124,7 +128,7 @@ class Asteroid(pygame.sprite.Sprite):
         while mass > 8:
             new_mass = random.random() * mass
             mass -= new_mass
-            if new_mass > 5:
+            if new_mass > MIN_RADIUS:
                 childs.append(new_mass)
             
         if childs:  
@@ -132,7 +136,7 @@ class Asteroid(pygame.sprite.Sprite):
                 off_set = random.random() * math.pi / 2
                 orientation = laser.angle + off_set - (math.pi / 4)
                 new_mass = childs[i]
-                list.add(Asteroid(self.rect.center, new_mass, orientation, 1))
+                list.add(Asteroid(self.rect.center, new_mass, orientation))
 
         self.kill()
 
@@ -170,6 +174,10 @@ screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 lasers = pygame.sprite.Group()
 asteroids = pygame.sprite.Group()
 
+asteroid_event = pygame.USEREVENT + 1
+
+pygame.time.set_timer(asteroid_event, 5000)
+
 while True:
     screen.fill("#000000")
 
@@ -183,9 +191,6 @@ while True:
             if key in [pygame.K_m]:
                 ship.grow()
 
-            if key == pygame.K_d:
-                asteroids.add(Asteroid((25, 25), 80, math.pi/2, 0.5))
-
             if key in [32, pygame.K_SPACE]:
                 radians = degrees_to_radians(ship.orientation)
                 lasers.add(Laser(ship.pos, radians))
@@ -194,6 +199,13 @@ while True:
                     cell_orientation = degrees_to_radians(cell["orientation"])
                     lasers.add(Laser(cell["pos"], cell_orientation + math.pi / 2))
                     lasers.add(Laser(cell["pos"], cell_orientation - math.pi / 2))
+
+        if event.type == asteroid_event:
+            size = random.randint(MIN_RADIUS, MAX_RADIUS)
+            orientation = random.random() * math.pi * 2
+
+            asteroids.add(Asteroid((-100, -100), size, orientation))
+                
 
     # matem nave na tela
     if ship.pos[0] > WIN_WIDTH: ship.pos = (0, ship.pos[1])
