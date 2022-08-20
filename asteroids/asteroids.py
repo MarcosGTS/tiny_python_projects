@@ -6,6 +6,10 @@ WIN_WIDTH = 800
 WIN_HEIGHT = 400
 FPS = 60
 
+MENU_STATE = 0
+GAME_STATE = 1
+GAME_OVER_STATE = 2
+
 MIN_RADIUS = 10
 MAX_RADIUS = 80
 MIN_VELOCITY = 0.4
@@ -16,7 +20,7 @@ def dist_between_points(p1, p2):
 def degrees_to_radians(degree):
     return 2 * math.pi * degree/360
 
-def draw_circle(pos, radius = 10, edges = 4, orientation = 0):
+def draw_circle(surface, pos, radius = 10, edges = 4, orientation = 0):
     origin = pos
     iterations = 360 // edges
     points = []
@@ -34,17 +38,24 @@ def draw_circle(pos, radius = 10, edges = 4, orientation = 0):
         points.append(trans_pos)
 
         if degrees == 0:
-            pygame.draw.line(screen,  "#FFFFFF", origin, trans_pos)
+            pygame.draw.line(surface,  "#FFFFFF", origin, trans_pos)
 
         if len(points) >= 2:
-            pygame.draw.line(screen, "#FFFFFF", points[-2], points[-1])
+            pygame.draw.line(surface, "#FFFFFF", points[-2], points[-1])
 
-class Ship():
+class Ship(pygame.sprite.Sprite):
     def __init__(self, pos):
+        super().__init__()
+
         self.pos = pos
         self.orientation = 0
         self.aceleration = 0.2
         self.velocity = 0
+
+        self.image = pygame.Surface((20, 20))
+        draw_circle(self.image, (10, 10), 10, 3, self.orientation)
+        
+        self.rect = self.image.get_rect(center = pos)
 
         self.orientation_buffer = 0
         self.buffer = self.pos
@@ -58,9 +69,13 @@ class Ship():
 
         if keys[pygame.K_LEFT]:
             self.orientation -= 5
-
+            self.image.fill("#000000")
+            draw_circle(self.image, (10, 10), 10, 3, self.orientation)
+            
         if keys[pygame.K_RIGHT]:
             self.orientation += 5
+            self.image.fill("#000000")
+            draw_circle(self.image, (10, 10), 10, 3, self.orientation)
 
     def move(self):
         #atrito
@@ -72,6 +87,9 @@ class Ship():
         velocity_x *= self.velocity
         velocity_y *= self.velocity
         self.pos = (self.pos[0] + velocity_x, self.pos[1] + velocity_y)
+
+        self.rect.center = self.pos
+        
     
     def updade_buffer(self):
         dist = dist_between_points(self.pos, self.buffer)
@@ -83,12 +101,10 @@ class Ship():
     def grow(self):
         self.body.append({"pos": (self.buffer), "orientation": self.orientation_buffer})
 
-    def update(self, surface):
+    def update(self):
         self.updade_buffer()
         self.move()
         self.get_input()
-
-        draw_circle(ship.pos, 10, 3, ship.orientation)
         
         for piece in self.body:
             draw_circle(piece["pos"], 6, 3, piece["orientation"])
@@ -168,15 +184,17 @@ class Laser(pygame.sprite.Sprite):
 pygame.init()
 clock = pygame.time.Clock()
 
-ship = Ship((400, 200))
+ship = pygame.sprite.GroupSingle()
+ship.add(Ship((400, 200)))
 screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 
 lasers = pygame.sprite.Group()
 asteroids = pygame.sprite.Group()
 
 asteroid_event = pygame.USEREVENT + 1
-
 pygame.time.set_timer(asteroid_event, 5000)
+
+game_state = MENU_STATE
 
 while True:
     screen.fill("#000000")
@@ -186,53 +204,68 @@ while True:
             pygame.quit()
             exit()
         
-        if event.type == pygame.KEYDOWN:
-            key = event.key
-            if key in [pygame.K_m]:
-                ship.grow()
+        if game_state == GAME_STATE:
+            if event.type == pygame.KEYDOWN:
+                key = event.key
+                if key in [pygame.K_m]:
+                    ship.grow()
 
-            if key in [32, pygame.K_SPACE]:
-                radians = degrees_to_radians(ship.orientation)
-                lasers.add(Laser(ship.pos, radians))
+                if key in [32, pygame.K_SPACE]:
+                    radians = degrees_to_radians(ship.sprite.orientation)
+                    lasers.add(Laser(ship.sprite.pos, radians))
 
-                for cell in ship.body:
-                    cell_orientation = degrees_to_radians(cell["orientation"])
-                    lasers.add(Laser(cell["pos"], cell_orientation + math.pi / 2))
-                    lasers.add(Laser(cell["pos"], cell_orientation - math.pi / 2))
+                    for cell in ship.sprite.body:
+                        cell_orientation = degrees_to_radians(cell["orientation"])
+                        lasers.add(Laser(cell["pos"], cell_orientation + math.pi / 2))
+                        lasers.add(Laser(cell["pos"], cell_orientation - math.pi / 2))
 
-        if event.type == asteroid_event:
-            size = random.randint(MIN_RADIUS, MAX_RADIUS)
-            orientation = random.random() * math.pi * 2
+            if event.type == asteroid_event:
+                size = random.randint(MIN_RADIUS, MAX_RADIUS)
+                orientation = random.random() * math.pi * 2
 
-            asteroids.add(Asteroid((-100, -100), size, orientation))
-                
+                asteroids.add(Asteroid((-100, -100), size, orientation))
+        
+        elif game_state == MENU_STATE:
+            if event.type == pygame.KEYDOWN:
+                print(event.key)
+                if event.key in [32, 13, pygame.K_KP_ENTER]:
+                    game_state = GAME_STATE
 
-    # matem nave na tela
-    if ship.pos[0] > WIN_WIDTH: ship.pos = (0, ship.pos[1])
-    if ship.pos[1] > WIN_HEIGHT: ship.pos = (ship.pos[0], 0)
-    if ship.pos[0] < 0: ship.pos = (WIN_WIDTH, ship.pos[1])
-    if ship.pos[1] < 0: ship.pos = (ship.pos[0], WIN_HEIGHT)
 
-    # manter asteroids na tela
-    for asteroid in asteroids:
-        if asteroid.rect.left > WIN_WIDTH: asteroid.pos = (0, asteroid.pos[1])
-        if asteroid.rect.top  > WIN_HEIGHT: asteroid.pos = (asteroid.pos[0], 0)
-        if asteroid.rect.right  < 0: asteroid.pos = (WIN_WIDTH, asteroid.pos[1])
-        if asteroid.rect.bottom < 0: asteroid.pos = (asteroid.pos[0], WIN_HEIGHT)
 
-    ship.update(screen)
+    if game_state == GAME_STATE:
+        # matem nave na tela
+        if ship.sprite.pos[0] > WIN_WIDTH: ship.sprite.pos = (0, ship.sprite.pos[1])
+        if ship.sprite.pos[1] > WIN_HEIGHT: ship.sprite.pos = (ship.sprite.pos[0], 0)
+        if ship.sprite.pos[0] < 0: ship.sprite.pos = (WIN_WIDTH, ship.sprite.pos[1])
+        if ship.sprite.pos[1] < 0: ship.sprite.pos = (ship.sprite.pos[0], WIN_HEIGHT)
 
-    lasers.draw(screen)
-    lasers.update()
+        # manter asteroids na tela
+        for asteroid in asteroids:
+            if asteroid.rect.left > WIN_WIDTH: asteroid.pos = (0, asteroid.pos[1])
+            if asteroid.rect.top  > WIN_HEIGHT: asteroid.pos = (asteroid.pos[0], 0)
+            if asteroid.rect.right  < 0: asteroid.pos = (WIN_WIDTH, asteroid.pos[1])
+            if asteroid.rect.bottom < 0: asteroid.pos = (asteroid.pos[0], WIN_HEIGHT)
 
-    asteroids.draw(screen)
-    asteroids.update()
+        ship.draw(screen)
+        ship.update()
 
-    for laser in lasers:
-        asteroid = pygame.sprite.spritecollideany(laser, asteroids)
-        if asteroid:
-            asteroid.destroy(laser, asteroids)
-            laser.kill()
+        lasers.draw(screen)
+        lasers.update()
+
+        asteroids.draw(screen)
+        asteroids.update()
+
+        for laser in lasers:
+            asteroid = pygame.sprite.spritecollideany(laser, asteroids)
+            if asteroid:
+                asteroid.destroy(laser, asteroids)
+                laser.kill()
+
+        #game over
+        
+    elif game_state == MENU_STATE:
+        screen.fill("red")
     
     pygame.display.update()
     clock.tick(FPS)
