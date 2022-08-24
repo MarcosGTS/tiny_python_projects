@@ -26,9 +26,9 @@ screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 font_title = pygame.font.Font(None, 50)
 font_simple = pygame.font.Font(None, 25)
 
-bg_music = pygame.mixer.Sound("./bgm_action_3.mp3")
-laser_sound = pygame.mixer.Sound("./laser1.wav")
-hit_sound = pygame.mixer.Sound("./hit01.wav")
+bg_music = pygame.mixer.Sound("./assets/bgm_action_3.mp3")
+laser_sound = pygame.mixer.Sound("./assets/laser1.wav")
+hit_sound = pygame.mixer.Sound("./assets/hit01.wav")
 
 base_volume = bg_music.get_volume()
 bg_music.play(-1)
