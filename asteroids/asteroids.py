@@ -1,3 +1,4 @@
+from email.mime import base
 import pygame, math, random
 from Ship import Ship
 from Laser import Laser
@@ -18,61 +19,20 @@ MIN_VELOCITY = 0.4
 
 def degrees_to_radians(degree):
     return 2 * math.pi * degree/360
-        
-# class Asteroid(pygame.sprite.Sprite):
-#     def __init__(self, pos, radius=10, orientation=0):
-#         super().__init__()
-        
-#         self.radius = radius
-#         self.orientation = orientation
-#         self.velocity =  MIN_VELOCITY / (radius / MAX_RADIUS) 
-#         self.pos = pos
-
-#         dimensions = (self.radius, self.radius)
-
-#         surface = pygame.Surface((2*self.radius, 2*self.radius))
-#         surface.set_colorkey("#000000")
-#         pygame.draw.circle(surface, "#FFFFFF", dimensions ,self.radius, 1)
-
-#         self.image = surface
-#         self.rect = self.image.get_rect(center=pos)
-
-#     def move(self):
-#         x_velocity, y_velocity = (math.cos(self.orientation), math.sin(self.orientation))
-        
-#         x_velocity *= self.velocity
-#         y_velocity *= self.velocity
-
-#         self.pos = (self.pos[0] + x_velocity, self.pos[1] + y_velocity)    
-#         self.rect.center = (self.pos[0], self.pos[1])
-        
-#     def destroy(self, laser, list):
-#         mass = self.radius
-
-#         childs = []
-
-#         while mass > 8:
-#             new_mass = random.random() * mass
-#             mass -= new_mass
-#             if new_mass > MIN_RADIUS:
-#                 childs.append(new_mass)
-            
-#         if childs:  
-#             for i in range(len(childs)):
-#                 off_set = random.random() * math.pi / 2
-#                 orientation = laser.angle + off_set - (math.pi / 4)
-#                 new_mass = childs[i]
-#                 list.add(Asteroid(self.rect.center, new_mass, orientation))
-
-#         self.kill()
-
-#     def update(self):
-#         self.move()
 
 pygame.init()
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-font = pygame.font.Font(None, 50)
+font_title = pygame.font.Font(None, 50)
+font_simple = pygame.font.Font(None, 25)
+
+bg_music = pygame.mixer.Sound("./bgm_action_3.mp3")
+laser_sound = pygame.mixer.Sound("./laser1.wav")
+hit_sound = pygame.mixer.Sound("./hit01.wav")
+
+base_volume = bg_music.get_volume()
+bg_music.play(-1)
+bg_music.set_volume(base_volume * 0.4)
 
 ship = pygame.sprite.GroupSingle()
 ship.add(Ship((400, 200)))
@@ -103,6 +63,7 @@ while True:
                     laser_pos = ship.sprite.pos.get_parameters()
                     radians = degrees_to_radians(ship.sprite.orientation)
                     lasers.add(Laser(laser_pos, radians))
+                    laser_sound.play()
 
                     for cell in ship.sprite.body:
                         cell_orientation = degrees_to_radians(cell["orientation"])
@@ -117,14 +78,16 @@ while True:
         
         elif game_state == MENU_STATE:
             if event.type == pygame.KEYDOWN:
-                if event.key in [32, 13, pygame.K_KP_ENTER]:
-                    game_state = GAME_STATE
+                game_state = GAME_STATE
 
         elif game_state == GAME_OVER_STATE:
             if event.type == pygame.KEYDOWN:
-                game_state = MENU_STATE
+                key = event.key 
+                if key in [pygame.K_RETURN]:
+                    game_state = MENU_STATE
 
     if game_state == GAME_STATE:
+        bg_music.set_volume(base_volume)
         ship_pos = ship.sprite.pos.get_parameters()
         
         # keep ship on screen
@@ -158,13 +121,16 @@ while True:
             if asteroid:
                 score += MAX_RADIUS - int(asteroid.radius) + 10
                 asteroid.destroy(laser, asteroids)
+                hit_sound.play()
                 laser.kill()
 
-        score_text = font.render(f'{score}', False, "#FFFFFF")
+        score_text = font_title.render(f'{score}', False, "#FFFFFF")
         score_surf = score_text.get_rect(center=(WIN_WIDTH/2, WIN_HEIGHT * .1))
         screen.blit(score_text, score_surf)
 
     elif game_state == MENU_STATE:
+        bg_music.set_volume(base_volume * 0.4)
+
         # reset values
         ship.empty()
         ship.add(Ship((400, 200)))
@@ -173,10 +139,29 @@ while True:
         lasers.empty()
 
         score = 0
-        screen.fill("red")
+
+        screen.fill("#000000")
+        game_title = font_title.render("ASTEROIDS", False, "#FFFFFF")
+        game_title_surf = game_title.get_rect(center=(WIN_WIDTH/2, 50))
+
+        menu_msg = font_simple.render("Press any button", False, "#FFFFFF")
+        menu_msg_surf = menu_msg.get_rect(center=(WIN_WIDTH/2, WIN_HEIGHT - 50))
+        
+        screen.blit(game_title, game_title_surf)
+        screen.blit(menu_msg, menu_msg_surf)
 
     elif game_state == GAME_OVER_STATE:
-        screen.fill("green")
+        bg_music.set_volume(base_volume * 0.4)
+        gameover_msg = font_title.render(f"Final Score: {score}", False, "#FFFFFF")
+        gameover_msg_surf = gameover_msg.get_rect(center=(WIN_WIDTH/2, 50))
+        
+        restart_msg = font_simple.render("Enter to restart", False, "#FFFFFF")
+        restart_msg_surf = restart_msg.get_rect(center=(WIN_WIDTH/2, WIN_HEIGHT - 25))
+
+        screen.fill("#000000")
+        screen.blit(gameover_msg, gameover_msg_surf)
+        screen.blit(restart_msg, restart_msg_surf)
+        
     
     pygame.display.update()
     clock.tick(FPS)
