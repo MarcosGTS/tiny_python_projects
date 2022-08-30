@@ -1,6 +1,6 @@
 import pygame
 from sys import exit
-from vector import Vector2D
+from mover.vector import Vector2D
 
 W_WIDTH = 400
 W_HEIGTH = 400
@@ -35,7 +35,8 @@ point_list = [
 Vector2D(10, 20),
 Vector2D(0, 0),
 Vector2D(300, 80),
-Vector2D(250, 20)]
+Vector2D(250, 20),
+]
     
 selected_point = None
 

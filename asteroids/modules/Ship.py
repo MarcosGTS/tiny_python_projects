@@ -1,8 +1,8 @@
 import pygame, math
-from vector import Vector2D
+from modules.vector import Vector2D
+from modules.Laser import Laser
 
-def dist_between_points(p1, p2):
-    return ((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)**(1/2)
+SHIP_ROTATION_RATE = 0.1
 
 def degrees_to_radians(degree):
     return 2 * math.pi * degree/360
@@ -14,7 +14,7 @@ def draw_circle(surface, pos, radius = 10, edges = 4, orientation = 0):
 
     for degrees in range(0, 361, iterations):
         #degree to radians
-        radians = degrees_to_radians(degrees + orientation)
+        radians = degrees_to_radians(degrees) + orientation
 
         #realtive (x, y)
         [x, y] = map(lambda p: p * radius, [math.cos(radians), math.sin(radians)])
@@ -25,7 +25,7 @@ def draw_circle(surface, pos, radius = 10, edges = 4, orientation = 0):
         points.append(trans_pos)
 
         if degrees == 0:
-            pygame.draw.line(surface,  "#FFFFFF", origin, trans_pos)
+            pygame.draw.line(surface, "#FFFFFF", origin, trans_pos)
 
         if len(points) >= 2:
             pygame.draw.line(surface, "#FFFFFF", points[-2], points[-1])
@@ -52,19 +52,18 @@ class Ship(pygame.sprite.Sprite):
     def get_input(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
-            radians = degrees_to_radians(self.orientation)
-            x, y = (math.cos(radians), math.sin(radians))
+            x, y = (math.cos(self.orientation), math.sin(self.orientation))
             self.aceleration = Vector2D(x, y).set_magnitude(0.5)
             self.velocity = self.velocity.add(self.aceleration)
             self.orientation_buffer = self.orientation
 
         if keys[pygame.K_LEFT]:
-            self.orientation -= 5
+            self.orientation -= SHIP_ROTATION_RATE
             self.image.fill("#000000")
             draw_circle(self.image, (10, 10), 10, 3, self.orientation)
             
         if keys[pygame.K_RIGHT]:
-            self.orientation += 5
+            self.orientation += SHIP_ROTATION_RATE
             self.image.fill("#000000")
             draw_circle(self.image, (10, 10), 10, 3, self.orientation)
 
@@ -75,7 +74,7 @@ class Ship(pygame.sprite.Sprite):
         self.rect.center = self.pos.get_parameters()
         
     def updade_buffer(self):
-        dist = dist_between_points(self.pos.get_parameters(), self.buffer.get_parameters())
+        dist = self.pos.sub(self.buffer).get_magnitude()
         if dist > 14:
             self.body.append({"pos":self.buffer, "orientation": self.orientation_buffer})
             self.body = self.body[1:]
@@ -84,6 +83,11 @@ class Ship(pygame.sprite.Sprite):
     def grow(self):
         self.body.append({"pos": (self.buffer), "orientation": self.orientation_buffer})
 
+    def shoot(self):
+        position = self.pos.get_parameters()
+        orientation = self.orientation
+        return Laser(position, orientation)
+       
     def update(self):
         self.updade_buffer()
         self.move()
@@ -91,4 +95,4 @@ class Ship(pygame.sprite.Sprite):
         
         for piece in self.body:
             draw_circle(piece["pos"], 6, 3, piece["orientation"])
-        
+

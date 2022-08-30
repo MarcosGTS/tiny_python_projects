@@ -1,6 +1,6 @@
 import pygame, math
-from vector import Vector2D
-from Config import *
+from modules.vector import Vector2D
+from modules.Config import *
 
 class Laser(pygame.sprite.Sprite):
     def __init__(self, pos, angle):

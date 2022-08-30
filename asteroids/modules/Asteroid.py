@@ -1,5 +1,5 @@
 import pygame, math, random
-from Config import *
+from modules.Config import *
 
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, pos, radius=10, orientation=0):
@@ -47,6 +47,12 @@ class Asteroid(pygame.sprite.Sprite):
                 list.add(Asteroid(self.rect.center, new_mass, orientation))
 
         self.kill()
+
+    def generate_random_asteroid():
+        size = random.randint(MIN_RADIUS, MAX_RADIUS)
+        orientation = random.random() * math.pi * 2
+
+        return Asteroid((-100, -100), size, orientation)
 
     def update(self):
         self.move()

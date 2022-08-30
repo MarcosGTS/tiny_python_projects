@@ -49,5 +49,15 @@ def render_word(word):
         char_obj.print()
     print()
 
+word = random.choice(words)
+print("Palavra foi escolhida", end="\n\n")
 
-render_word(compare("merma", "teste"))
+while True: 
+    guess = input("guess: ")
+    render_word(compare(word, guess))
+
+    if (word == guess):
+        print("Parabens")
+        break
+
+print("Finalizado")
