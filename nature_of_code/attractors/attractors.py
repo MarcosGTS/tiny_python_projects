@@ -5,8 +5,8 @@ from vector import Vector2D
 WIDTH = 400
 HEIGHT = 400
 
-G = .5
-MAX_GRAVITY_FORCE = 10
+G = 10
+MAX_GRAVITY_FORCE = 100
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -28,18 +28,43 @@ class Particle():
         self.position = self.position.add(self.vel)
         self.acc = Vector2D(0, 0)
     
-    def render(self, surface):
+    def render(self, surface, color = "red"):
         position = self.position.get_parameters()
         radius = self.rad
-        pygame.draw.circle(surface, "red", position, radius, 4)
+        pygame.draw.circle(surface, color, position, radius, 4)
 
 
-attractors = [Particle(WIDTH/2, HEIGHT/2, 50)]
+class Attractor (Particle):
+    def __init__(self, x, y):
+        super().__init__(x, y, 1)
+        self.rad = 10
+
+    def apply_force(self, particle):
+        #get direction
+        force = self.position.sub(particle.position)
+        #set magnitude
+        if force.get_magnitude() > self.rad:
+            return force.set_magnitude(particle.mass / (force.get_magnitude() ** 2) * G)
+
+        return Vector2D(0, 0)
+
+class Repulsor (Attractor):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+
+    def apply_force(self, particle):
+        #invert force
+        return super().apply_force(particle).mult_scalar(-1)
+
+    def render(self, surface):
+        super().render(surface, "green")
+
+attractors = []
 particles = []
 
 particle_event = pygame.USEREVENT + 1
 
-pygame.time.set_timer(particle_event, 2000)
+pygame.time.set_timer(particle_event, 1000)
 
 while True:
     screen.fill("black")
@@ -54,33 +79,31 @@ while True:
             mass = random.randint(10, 30)
             particle = Particle(mouse_x, mouse_y, mass)
 
-            particle.vel = Vector2D(0, .5)
+            # particle.vel = Vector2D(0, .5)
             particles.append(particle)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            attractor = Particle(mouse_x, mouse_y, 50)
-            attractors.append(attractor)
-
+            mouse_l, mouse_m, mouse_r = pygame.mouse.get_pressed()
             
+            if mouse_l:
+                attractor = Attractor(mouse_x, mouse_y)
+                attractors.append(attractor)
+            elif mouse_r:
+                repulsor = Repulsor(mouse_x, mouse_y)
+                attractors.append(repulsor)
+
     for attractor in attractors:
-        attractor.render(screen)
-        
         for p in particles:
-
-            dif_vector = attractor.position.sub(p.position)
-            distance = dif_vector.get_magnitude()
-            direction = dif_vector.normalize()
-            force = Vector2D(0, 0)
-            
-            if distance > 50:
-                force = direction.set_magnitude(attractor.mass * p.mass /(distance ** 2))
-                force = force.mult_scalar(G)
-                if force.get_magnitude() > MAX_GRAVITY_FORCE: force.set_magnitude(MAX_GRAVITY_FORCE)
-        
+            force = attractor.apply_force(p)
+            if force.get_magnitude() > MAX_GRAVITY_FORCE: force.set_magnitude(MAX_GRAVITY_FORCE)
             p.apply_force(force)
-            p.move()
-            p.render(screen) 
+            
+        attractor.render(screen)
+
+    for p in particles:
+        p.move()
+        p.render(screen) 
 
     pygame.display.update()
     clock.tick(60)
