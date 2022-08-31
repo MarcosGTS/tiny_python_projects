@@ -1,6 +1,33 @@
 import pygame, math, random
 from modules.Config import *
 
+
+def get_asteroid_shape(radius):
+    points = []
+    angle = 0
+    
+    min_increment = 0.3
+    max_increment = math.pi / 2
+
+    while angle < math.pi * 2:
+        x = math.cos(angle) * radius 
+        y = math.sin(angle) * radius
+
+        points.append((radius + x, radius + y))
+        angle += (max_increment - min_increment) * random.random() + min_increment
+
+    return points
+
+def get_asteroid_surface(radius):
+    asteroid_surf = pygame.Surface((radius * 2, radius * 2))
+    shape = get_asteroid_shape(radius) 
+
+    pygame.draw.lines(asteroid_surf, "white", True, shape)
+    asteroid_surf.set_colorkey("#000000") # turn black to trasparent
+
+    return asteroid_surf
+
+    
 class Asteroid(pygame.sprite.Sprite):
     def __init__(self, pos, radius=10, orientation=0):
         super().__init__()
@@ -12,9 +39,7 @@ class Asteroid(pygame.sprite.Sprite):
 
         dimensions = (self.radius, self.radius)
 
-        surface = pygame.Surface((2*self.radius, 2*self.radius))
-        surface.set_colorkey("#000000")
-        pygame.draw.circle(surface, "#FFFFFF", dimensions ,self.radius, 1)
+        surface = get_asteroid_surface(radius)
 
         self.image = surface
         self.rect = self.image.get_rect(center=pos)
@@ -51,8 +76,11 @@ class Asteroid(pygame.sprite.Sprite):
     def generate_random_asteroid():
         size = random.randint(MIN_RADIUS, MAX_RADIUS)
         orientation = random.random() * math.pi * 2
+        
+        x, y = (math.cos(orientation) * WIN_WIDTH, math.sin(orientation) * WIN_HEIGHT)
+        x, y = (x + WIN_WIDTH/2, y + WIN_HEIGHT/2)
 
-        return Asteroid((-100, -100), size, orientation)
+        return Asteroid((x, y), size, orientation)
 
     def update(self):
         self.move()
